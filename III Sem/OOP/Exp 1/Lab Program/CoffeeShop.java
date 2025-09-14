@@ -1,77 +1,51 @@
 // CoffeeShop.java
 import java.util.Scanner;
-import java.util.ArrayList; // Using ArrayList for dynamic order items
-import java.util.Arrays;    // For fixed menu array
+import java.util.ArrayList;
 
 public class CoffeeShop {
 
-    // Fixed Menu Items (using an array)
-    private MenuItem[] menu;
+    private String[] menuNames = {
+        "Espresso", "Latte", "Cappuccino", "Americano",
+        "Muffin", "Croissant", "Orange Juice"
+    };
+    private double[] menuPrices = {
+        2.50, 4.00, 3.75, 3.00,
+        2.75, 3.25, 2.00
+    };
+
     private double taxRate;
-    private double discountPercentage; // Global discount for simplicity
+    private double discountPercentage;
 
     public CoffeeShop(double taxRate, double discountPercentage) {
         this.taxRate = taxRate;
         this.discountPercentage = discountPercentage;
-        initializeMenu();
     }
 
-    private void initializeMenu() {
-        menu = new MenuItem[] {
-            new MenuItem("Espresso", 2.50),
-            new MenuItem("Latte", 4.00),
-            new MenuItem("Cappuccino", 3.75),
-            new MenuItem("Americano", 3.00),
-            new MenuItem("Muffin", 2.75),
-            new MenuItem("Croissant", 3.25),
-            new MenuItem("Orange Juice", 2.00)
-        };
-    }
-
-    public void displayMenu() {
+    private void displayMenu() {
         System.out.println("\n--- Our Menu ---");
-        for (int i = 0; i < menu.length; i++) {
-            System.out.println((i + 1) + ". " + menu[i].toString());
+        for (int i = 0; i < menuNames.length; i++) {
+            System.out.printf("%d. %s - $%.2f%n", (i + 1), menuNames[i], menuPrices[i]);
         }
         System.out.println("----------------\n");
     }
 
-    // Helper to find a MenuItem by its name (case-insensitive)
-    public MenuItem findMenuItem(String itemName) {
-        for (MenuItem item : menu) {
-            if (item.getName().equalsIgnoreCase(itemName)) {
-                return item;
-            }
-        }
-        return null; // Not found
-    }
-
-    // Helper to find a MenuItem by its index (from displayed menu)
-    public MenuItem getMenuItemByIndex(int index) {
-        if (index >= 0 && index < menu.length) {
-            return menu[index];
-        }
-        return null;
-    }
-
     public void processOrder() {
         Scanner scanner = new Scanner(System.in);
-        ArrayList<OrderItem> customerOrder = new ArrayList<>(); // Using ArrayList for order, more flexible than fixed array
+        ArrayList<Integer> orderItems = new ArrayList<>();   // store menu indexes
+        ArrayList<Integer> orderQuantities = new ArrayList<>(); // store corresponding quantities
         double subtotal = 0;
 
         System.out.println("Welcome to the Coffee Shop!");
         displayMenu();
 
-        System.out.println("Enter your order (type item number and quantity, e.g., '1 2' for 2 Espressos).");
+        System.out.println("Enter your order (e.g., '1 2' for 2 Espressos).");
         System.out.println("Type 'done' when finished.");
 
         while (true) {
             System.out.print("Order item (number quantity or 'done'): ");
             String input = scanner.nextLine().trim();
 
-            if (input.equalsIgnoreCase("done")) {
-                break;
-            }
+            if (input.equalsIgnoreCase("done")) break;
 
             try {
                 String[] parts = input.split(" ");
@@ -79,60 +53,69 @@ public class CoffeeShop {
                     int itemNumber = Integer.parseInt(parts[0]);
                     int quantity = Integer.parseInt(parts[1]);
 
+                    if (itemNumber < 1 || itemNumber > menuNames.length) {
+                        System.out.println("Invalid item number. Check the menu.");
+                        continue;
+                    }
                     if (quantity <= 0) {
-                        System.out.println("Quantity must be positive. Please try again.");
+                        System.out.println("Quantity must be positive. Try again.");
                         continue;
                     }
 
-                    MenuItem selectedItem = getMenuItemByIndex(itemNumber - 1); // -1 because menu is 0-indexed
-                    if (selectedItem != null) {
-                        OrderItem orderItem = new OrderItem(selectedItem, quantity);
-                        customerOrder.add(orderItem);
-                        subtotal += orderItem.getTotalCost();
-                        System.out.println("Added: " + orderItem.toString());
-                    } else {
-                        System.out.println("Invalid item number. Please refer to the menu.");
-                    }
+                    int index = itemNumber - 1;
+                    orderItems.add(index);
+                    orderQuantities.add(quantity);
+
+                    double cost = menuPrices[index] * quantity;
+                    subtotal += cost;
+
+                    System.out.printf("Added: %s x %d = $%.2f%n",
+                            menuNames[index], quantity, cost);
                 } else {
-                    System.out.println("Invalid input format. Please enter 'item_number quantity'.");
+                    System.out.println("Invalid format. Use 'item_number quantity'.");
                 }
             } catch (NumberFormatException e) {
-                System.out.println("Invalid number format. Please enter valid numbers for item and quantity.");
+                System.out.println("Invalid input. Use numbers for item and quantity.");
             } catch (Exception e) {
-                System.out.println("An unexpected error occurred: " + e.getMessage());
+                System.out.println("Error: " + e.getMessage());
             }
         }
 
-        if (customerOrder.isEmpty()) {
+        if (orderItems.isEmpty()) {
             System.out.println("No items ordered. Order cancelled.");
-            // scanner.close(); // Close scanner here if no receipt is generated
             return;
         }
 
-        generateReceipt(customerOrder, subtotal);
-        scanner.close(); // Close scanner once all input is done
+        generateReceipt(orderItems, orderQuantities, subtotal);
+        scanner.close();
     }
 
-    private void generateReceipt(ArrayList<OrderItem> order, double subtotal) {
+    private void generateReceipt(ArrayList<Integer> orderItems,
+                                 ArrayList<Integer> orderQuantities,
+                                 double subtotal) {
         System.out.println("\n\n--- Your Receipt ---");
         System.out.println("Items Ordered:");
-        for (OrderItem item : order) {
-            System.out.println("  " + item.getItem().getName() + " x " + item.getQuantity() +
-                               " @ $" + String.format("%.2f", item.getItem().getPrice()) +
-                               " = $" + String.format("%.2f", item.getTotalCost()));
+
+        for (int i = 0; i < orderItems.size(); i++) {
+            int index = orderItems.get(i);
+            int qty = orderQuantities.get(i);
+            double cost = menuPrices[index] * qty;
+
+            System.out.printf("  %s x %d @ $%.2f = $%.2f%n",
+                    menuNames[index], qty, menuPrices[index], cost);
         }
         System.out.println("--------------------");
 
         System.out.printf("Subtotal: $%.2f%n", subtotal);
 
         double discountAmount = subtotal * discountPercentage;
-        System.out.printf("Discount (%.0f%%): -$%.2f%n", (discountPercentage * 100), discountAmount);
+        System.out.printf("Discount (%.0f%%): -$%.2f%n", discountPercentage * 100, discountAmount);
 
         double subtotalAfterDiscount = subtotal - discountAmount;
         System.out.printf("Subtotal after discount: $%.2f%n", subtotalAfterDiscount);
 
         double taxAmount = subtotalAfterDiscount * taxRate;
-        System.out.printf("Tax (%.1f%%): +$%.2f%n", (taxRate * 100), taxAmount);
+        System.out.printf("Tax (%.1f%%): +$%.2f%n", taxRate * 100, taxAmount);
 
         double finalTotal = subtotalAfterDiscount + taxAmount;
         System.out.printf("Final Total: $%.2f%n", finalTotal);
@@ -142,8 +125,7 @@ public class CoffeeShop {
     }
 
     public static void main(String[] args) {
-        // Initialize CoffeeShop with a 8% tax rate and 10% discount
-        CoffeeShop myCoffeeShop = new CoffeeShop(0.08, 0.10);
-        myCoffeeShop.processOrder();
+        CoffeeShop shop = new CoffeeShop(0.08, 0.10);
+        shop.processOrder();
     }
 }
